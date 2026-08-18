@@ -3,7 +3,7 @@ import {
   ConflictException,
   Injectable,
 } from "@nestjs/common";
-import { Employee, Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../generated/prisma/client";
 import { PrismaService } from "../../prisma/prisma.service";
 import { AuthService } from "../auth/auth.service";
 import { CreateEmployeeDto } from "./dto/create-employee.dto";
@@ -65,17 +65,15 @@ export class EmployeesService {
         payoutPeriod: payrollDetails?.payoutPeriod ?? null,
         workWeek: (payrollDetails?.workWeek ??
           null) as unknown as Prisma.InputJsonValue,
+        userCredential: {
+          create: {},
+        },
       },
+      include: { userCredential: true },
     });
 
     const setupToken = await this.authService.signSetupToken(employee.id);
 
-    return { employee: this.toSafeEmployee(employee), setupToken };
-  }
-
-  private toSafeEmployee(employee: Employee): Omit<Employee, "passwordHash"> {
-    const { passwordHash, ...safe } = employee;
-    void passwordHash;
-    return safe;
+    return { employee, setupToken };
   }
 }

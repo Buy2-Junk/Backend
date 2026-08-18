@@ -1,0 +1,545 @@
+---
+config:
+  theme: neo
+---
+erDiagram
+	direction TB
+	Company {
+		uuid id PK ""  
+		string name  ""  
+		string code  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	DEPARTMENTS {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string code  ""  
+		string description  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	EMPLOYEES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string employee_number  ""  
+		string first_name  ""  
+		string last_name  ""  
+		string email  ""  
+		string phone_number  ""  
+		string gender  ""  
+		uuid department_id FK ""  
+		uuid job_id FK ""  
+		uuid direct_manager_id FK ""  
+		string seniority_level  ""  
+		string job_type  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+		timestamp deleted_at  ""  
+	}
+
+	USER_CREDENTIALS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		string password_hash  ""  
+		timestamp last_password_changed_at  ""  
+		timestamp last_login_at  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	PASSWORD_RESET_OTPS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		string otp_hash  ""  
+		timestamp expires_at  ""  
+		timestamp used_at  ""  
+		int attempt_count  ""  
+		int resend_count  ""  
+		timestamp created_at  ""  
+	}
+
+	ROLES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string description  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+		timestamp deleted_at  ""  
+	}
+
+	PERMISSIONS {
+		uuid id PK ""  
+		string resource  ""  
+		string action  ""  
+		string description  ""  
+	}
+
+	ROLE_PERMISSIONS {
+		uuid id PK ""  
+		uuid role_id FK ""  
+		uuid permission_id FK ""  
+		timestamp created_at  ""  
+	}
+
+	EMPLOYEE_ROLES {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid role_id FK ""  
+		timestamp assigned_at  ""  
+		uuid assigned_by FK ""  
+	}
+
+	JOBS {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		uuid department_id FK ""  
+		string title  ""  
+		string description  ""  
+		string seniority_level  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	QUALIFICATIONS {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string description  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	JOB_QUALIFICATIONS {
+		uuid id PK ""  
+		uuid job_id FK ""  
+		uuid qualification_id FK ""  
+		boolean is_required  ""  
+		timestamp created_at  ""  
+	}
+
+	EMPLOYEE_QUALIFICATIONS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid qualification_id FK ""  
+		timestamp issued_at  ""  
+		timestamp expires_at  ""  
+		uuid document_id FK ""  
+		string status  ""  
+		timestamp created_at  ""  
+	}
+
+	JOB_PERFORMANCE_METRICS {
+		uuid id PK ""  
+		uuid job_id FK ""  
+		string name  ""  
+		string description  ""  
+		decimal measure  ""  
+		decimal target  ""  
+		decimal weight  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	EMPLOYEE_DOCUMENTS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		string category  ""  
+		string file_name  ""  
+		string file_url  ""  
+		string file_type  ""  
+		bigint file_size  ""  
+		timestamp issued_at  ""  
+		timestamp expires_at  ""  
+		uuid uploaded_by FK ""  
+		timestamp created_at  ""  
+		timestamp deleted_at  ""  
+	}
+
+	SITES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string code  ""  
+		string description  ""  
+		decimal latitude  ""  
+		decimal longitude  ""  
+		int max_headcount  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SITE_NETWORK_RULES {
+		uuid id PK ""  
+		uuid site_id FK ""  
+		string type  ""  
+		string value  ""  
+		string status  ""  
+		timestamp created_at  ""  
+	}
+
+	SITE_OPERATIONAL_HOURS {
+		uuid id PK ""  
+		uuid site_id FK ""  
+		string day_of_week  ""  
+		time open_time  ""  
+		time close_time  ""  
+		boolean is_closed  ""  
+	}
+
+	EMPLOYEE_SITES {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid site_id FK ""  
+		boolean is_primary  ""  
+		date assigned_from  ""  
+		date assigned_until  ""  
+		string status  ""  
+		timestamp created_at  ""  
+	}
+
+	ATTENDANCE_PROFILES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string description  ""  
+		decimal required_work_hours  ""  
+		int break_duration_minutes  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ATTENDANCE_PROFILE_DAYS {
+		uuid id PK ""  
+		uuid attendance_profile_id FK ""  
+		string day_of_week  ""  
+		time expected_clock_in  ""  
+		time expected_clock_out  ""  
+		decimal required_work_hours  ""  
+		int break_duration_minutes  ""  
+		boolean is_working_day  ""  
+	}
+
+	EMPLOYEE_ATTENDANCE_CONFIGS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid attendance_profile_id FK ""  
+		string day_of_week  ""  
+		boolean require_clock_in  ""  
+		boolean require_clock_out  ""  
+		uuid assigned_site_id FK ""  
+		string validation_method  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	ATTENDANCE_RECORDS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid site_id FK ""  
+		date work_date  ""  
+		timestamp clock_in_at  ""  
+		timestamp clock_out_at  ""  
+		timestamp expected_clock_in  ""  
+		timestamp expected_clock_out  ""  
+		int late_minutes  ""  
+		int worked_minutes  ""  
+		int overtime_minutes  ""  
+		string clock_in_validation_method  ""  
+		string clock_in_validation_value  ""  
+		string clock_out_validation_method  ""  
+		string clock_out_validation_value  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SCHEDULES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		uuid site_id FK ""  
+		date start_date  ""  
+		date end_date  ""  
+		string status  ""  
+		uuid created_by FK ""  
+		uuid published_by FK ""  
+		timestamp published_at  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SCHEDULE_SHIFTS {
+		uuid id PK ""  
+		uuid schedule_id FK ""  
+		uuid employee_id FK ""  
+		uuid job_id FK ""  
+		uuid site_id FK ""  
+		date work_date  ""  
+		timestamp start_time  ""  
+		timestamp end_time  ""  
+		string status  ""  
+		int overtime_minutes  ""  
+		boolean overtime_warning  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SCHEDULE_TEMPLATES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		uuid site_id FK ""  
+		string description  ""  
+		uuid created_by FK ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	SCHEDULE_TEMPLATE_SHIFTS {
+		uuid id PK ""  
+		uuid template_id FK ""  
+		string day_of_week  ""  
+		uuid job_id FK ""  
+		uuid employee_id FK ""  
+		time start_time  ""  
+		time end_time  ""  
+	}
+
+	SHIFT_MARKET_SHIFTS {
+		uuid id PK ""  
+		uuid schedule_shift_id FK ""  
+		uuid site_id FK ""  
+		uuid job_id FK ""  
+		timestamp start_time  ""  
+		timestamp end_time  ""  
+		string status  ""  
+		timestamp published_at  ""  
+		timestamp claimed_at  ""  
+		timestamp created_at  ""  
+	}
+
+	SHIFT_CLAIMS {
+		uuid id PK ""  
+		uuid market_shift_id FK ""  
+		uuid employee_id FK ""  
+		string status  ""  
+		int overtime_minutes  ""  
+		uuid reviewed_by FK ""  
+		timestamp reviewed_at  ""  
+		string rejection_reason  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	POINT_WALLETS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		bigint balance  ""  
+		bigint lifetime_earned  ""  
+		bigint lifetime_spent  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	POINT_TRANSACTIONS {
+		uuid id PK ""  
+		uuid wallet_id FK ""  
+		uuid employee_id FK ""  
+		string type  ""  
+		bigint amount  ""  
+		string source  ""  
+		string reference_type  ""  
+		uuid reference_id  ""  
+		string description  ""  
+		uuid created_by FK ""  
+		timestamp created_at  ""  
+	}
+
+	POINT_AUTOMATION_RULES {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string rule_key  ""  
+		string event_type  ""  
+		string evaluation_condition  ""  
+		string action  ""  
+		bigint point_value  ""  
+		string status  ""  
+		uuid created_by FK ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	DISCIPLINARY_VIOLATIONS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		string severity  ""  
+		string description  ""  
+		string witness_statement  ""  
+		uuid reported_by FK ""  
+		timestamp occurred_at  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	VIOLATION_EVIDENCE {
+		uuid id PK ""  
+		uuid violation_id FK ""  
+		string file_name  ""  
+		string file_url  ""  
+		string file_type  ""  
+		timestamp created_at  ""  
+	}
+
+	REWARDS {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string name  ""  
+		string description  ""  
+		bigint cost_in_points  ""  
+		string status  ""  
+		timestamp created_at  ""  
+		timestamp updated_at  ""  
+	}
+
+	REWARD_INVENTORY_CODES {
+		uuid id PK ""  
+		uuid reward_id FK ""  
+		string code  ""  
+		string status  ""  
+		decimal cost  ""  
+		timestamp uploaded_at  ""  
+		timestamp redeemed_at  ""  
+		uuid redeemed_by FK ""  
+		timestamp created_at  ""  
+	}
+
+	REWARD_REDEMPTIONS {
+		uuid id PK ""  
+		uuid employee_id FK ""  
+		uuid reward_id FK ""  
+		uuid inventory_code_id FK ""  
+		bigint points_spent  ""  
+		string status  ""  
+		timestamp redeemed_at  ""  
+	}
+
+	NOTIFICATIONS {
+		uuid id PK ""  
+		uuid company_id FK ""  
+		string title  ""  
+		string message  ""  
+		uuid created_by FK ""  
+		timestamp created_at  ""  
+	}
+
+	NOTIFICATION_TARGETS {
+		uuid id PK ""  
+		uuid notification_id FK ""  
+		uuid site_id FK ""  
+		uuid department_id FK ""  
+		uuid employee_id FK ""  
+	}
+
+	NOTIFICATION_RECIPIENTS {
+		uuid id PK ""  
+		uuid notification_id FK ""  
+		uuid employee_id FK ""  
+		string status  ""  
+		timestamp read_at  ""  
+		timestamp delivered_at  ""  
+	}
+
+	TENANTS||--o{DEPARTMENTS:"contains"
+	TENANTS||--o{EMPLOYEES:"contains"
+	TENANTS||--o{ROLES:"owns"
+	TENANTS||--o{JOBS:"owns"
+	TENANTS||--o{QUALIFICATIONS:"owns"
+	TENANTS||--o{SITES:"owns"
+	TENANTS||--o{ATTENDANCE_PROFILES:"owns"
+	TENANTS||--o{SCHEDULES:"owns"
+	TENANTS||--o{SCHEDULE_TEMPLATES:"owns"
+	TENANTS||--o{POINT_AUTOMATION_RULES:"owns"
+	TENANTS||--o{REWARDS:"owns"
+	TENANTS||--o{NOTIFICATIONS:"owns"
+	DEPARTMENTS||--o{EMPLOYEES:"has"
+	DEPARTMENTS||--o{JOBS:"contains"
+	EMPLOYEES||--||USER_CREDENTIALS:"has"
+	EMPLOYEES||--o{PASSWORD_RESET_OTPS:"requests"
+	EMPLOYEES||--o{EMPLOYEES:"manages"
+	EMPLOYEES||--o{EMPLOYEE_ROLES:"assigned"
+	ROLES||--o{EMPLOYEE_ROLES:"assigned_to"
+	ROLES||--o{ROLE_PERMISSIONS:"has"
+	PERMISSIONS||--o{ROLE_PERMISSIONS:"grants"
+	DEPARTMENTS||--o{JOBS:"owns"
+	JOBS||--o{JOB_QUALIFICATIONS:"requires"
+	QUALIFICATIONS||--o{JOB_QUALIFICATIONS:"required_by"
+	EMPLOYEES||--o{EMPLOYEE_QUALIFICATIONS:"possesses"
+	QUALIFICATIONS||--o{EMPLOYEE_QUALIFICATIONS:"possessed_by"
+	JOBS||--o{JOB_PERFORMANCE_METRICS:"defines"
+	EMPLOYEES||--o{EMPLOYEE_DOCUMENTS:"owns"
+	EMPLOYEES||--o{EMPLOYEE_DOCUMENTS:"uploads"
+	EMPLOYEE_DOCUMENTS||--o{EMPLOYEE_QUALIFICATIONS:"supports"
+	SITES||--o{SITE_NETWORK_RULES:"has"
+	SITES||--o{SITE_OPERATIONAL_HOURS:"defines"
+	EMPLOYEES||--o{EMPLOYEE_SITES:"assigned_to"
+	SITES||--o{EMPLOYEE_SITES:"has_employees"
+	ATTENDANCE_PROFILES||--o{ATTENDANCE_PROFILE_DAYS:"defines"
+	EMPLOYEES||--o{EMPLOYEE_ATTENDANCE_CONFIGS:"has"
+	ATTENDANCE_PROFILES||--o{EMPLOYEE_ATTENDANCE_CONFIGS:"assigned"
+	SITES||--o{EMPLOYEE_ATTENDANCE_CONFIGS:"validates_at"
+	EMPLOYEES||--o{ATTENDANCE_RECORDS:"records"
+	SITES||--o{ATTENDANCE_RECORDS:"occurs_at"
+	SITES||--o{SCHEDULES:"scheduled_at"
+	SCHEDULES||--o{SCHEDULE_SHIFTS:"contains"
+	EMPLOYEES||--o{SCHEDULE_SHIFTS:"assigned"
+	JOBS||--o{SCHEDULE_SHIFTS:"uses"
+	SITES||--o{SCHEDULE_SHIFTS:"occurs_at"
+	EMPLOYEES||--o{SCHEDULES:"creates"
+	EMPLOYEES||--o{SCHEDULES:"publishes"
+	SITES||--o{SCHEDULE_TEMPLATES:"has"
+	SCHEDULE_TEMPLATES||--o{SCHEDULE_TEMPLATE_SHIFTS:"contains"
+	JOBS||--o{SCHEDULE_TEMPLATE_SHIFTS:"uses"
+	EMPLOYEES||--o{SCHEDULE_TEMPLATE_SHIFTS:"assigns"
+	SCHEDULE_SHIFTS||--o|SHIFT_MARKET_SHIFTS:"listed_as"
+	SITES||--o{SHIFT_MARKET_SHIFTS:"available_at"
+	JOBS||--o{SHIFT_MARKET_SHIFTS:"requires"
+	SHIFT_MARKET_SHIFTS||--o{SHIFT_CLAIMS:"receives"
+	EMPLOYEES||--o{SHIFT_CLAIMS:"claims"
+	EMPLOYEES||--o{SHIFT_CLAIMS:"reviews"
+	EMPLOYEES||--||POINT_WALLETS:"owns"
+	POINT_WALLETS||--o{POINT_TRANSACTIONS:"contains"
+	EMPLOYEES||--o{POINT_TRANSACTIONS:"receives"
+	EMPLOYEES||--o{POINT_TRANSACTIONS:"creates"
+	POINT_AUTOMATION_RULES}o--||TENANTS:"belongs_to"
+	EMPLOYEES||--o{POINT_AUTOMATION_RULES:"creates"
+	EMPLOYEES||--o{DISCIPLINARY_VIOLATIONS:"receives"
+	EMPLOYEES||--o{DISCIPLINARY_VIOLATIONS:"reports"
+	DISCIPLINARY_VIOLATIONS||--o{VIOLATION_EVIDENCE:"has"
+	REWARDS||--o{REWARD_INVENTORY_CODES:"contains"
+	EMPLOYEES||--o{REWARD_INVENTORY_CODES:"redeems"
+	EMPLOYEES||--o{REWARD_REDEMPTIONS:"makes"
+	REWARDS||--o{REWARD_REDEMPTIONS:"redeemed"
+	REWARD_INVENTORY_CODES||--o|REWARD_REDEMPTIONS:"used_for"
+	NOTIFICATIONS||--o{NOTIFICATION_TARGETS:"targets"
+	SITES||--o{NOTIFICATION_TARGETS:"targets"
+	DEPARTMENTS||--o{NOTIFICATION_TARGETS:"targets"
+	EMPLOYEES||--o{NOTIFICATION_TARGETS:"targets"
+	NOTIFICATIONS||--o{NOTIFICATION_RECIPIENTS:"delivered_to"
+	EMPLOYEES||--o{NOTIFICATION_RECIPIENTS:"receives"
+	EMPLOYEES||--o{NOTIFICATIONS:"creates"
