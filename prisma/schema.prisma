@@ -36,6 +36,19 @@ enum PayoutPeriod {
   Monthly
 }
 
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("companies")
+}
+
 model Role {
   id          String   @id @default(cuid())
   name        String   @unique
@@ -52,7 +65,6 @@ model Role {
 model Employee {
   id              String         @id @default(cuid())
   email           String         @unique
-  passwordHash    String?
   firstName       String
   lastName        String
   phoneNumber     String
@@ -60,6 +72,8 @@ model Employee {
   status          EmployeeStatus @default(Pending)
   roleId          String
   role            Role           @relation(fields: [roleId], references: [id])
+  companyId       String?
+  company         Company?       @relation(fields: [companyId], references: [id])
 
   jobTitle        String?
   department      String?
@@ -77,23 +91,41 @@ model Employee {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
-  otps            Otp[]
+  userCredential  UserCredential?
+  passwordResetOtps PasswordResetOtp[]
 
   @@index([roleId])
+  @@index([companyId])
   @@map("employees")
 }
 
-model Otp {
-  id         String     @id @default(cuid())
-  email      String
-  codeHash   String
-  expiresAt  DateTime
-  attempts   Int        @default(0)
-  usedAt     DateTime?
-  createdAt  DateTime   @default(now())
-  employeeId String?
-  employee   Employee?  @relation(fields: [employeeId], references: [id])
+model UserCredential {
+  id                    String    @id @default(cuid())
+  employeeId            String    @unique
+  passwordHash          String?
+  lastPasswordChangedAt DateTime?
+  lastLoginAt           DateTime?
+  status                String    @default("Active")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
-  @@index([email])
-  @@map("otps")
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("user_credentials")
+}
+
+model PasswordResetOtp {
+  id           String   @id @default(cuid())
+  employeeId   String
+  otpHash      String
+  expiresAt    DateTime
+  attemptCount Int      @default(0)
+  resendCount  Int      @default(0)
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@map("password_reset_otps")
 }

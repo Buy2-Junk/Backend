@@ -19,19 +19,22 @@ import { OtpService } from "./otp.service";
 describe("AuthService", () => {
   let service: AuthService;
   let prisma: jest.Mocked<
-    Pick<PrismaService, "employee" | "otp" | "$transaction">
+    Pick<
+      PrismaService,
+      "employee" | "passwordResetOtp" | "userCredential" | "$transaction"
+    >
   >;
   let jwtService: jest.Mocked<JwtService>;
+
+  const hashOf = (password: string) => bcrypt.hashSync(password, 4);
 
   const employee = {
     id: "emp_1",
     email: "admin@buy2.com",
-    passwordHash: null,
     role: { name: "SuperAdmin" },
     status: "Active",
+    userCredential: null,
   } as never;
-
-  const hashOf = (password: string) => bcrypt.hashSync(password, 4);
 
   beforeEach(async () => {
     prisma = {
@@ -39,10 +42,14 @@ describe("AuthService", () => {
         findUnique: jest.fn(),
         update: jest.fn(),
       },
-      otp: {
+      passwordResetOtp: {
         findFirst: jest.fn(),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      userCredential: {
+        update: jest.fn(),
+        upsert: jest.fn(),
       },
       $transaction: jest.fn(),
     } as never;
@@ -82,7 +89,7 @@ describe("AuthService", () => {
     it("returns token/expiresIn/role for valid credentials", async () => {
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
         ...employee,
-        passwordHash: hashOf("Password123!"),
+        userCredential: { passwordHash: hashOf("Password123!") },
       });
 
       const result = await service.login("admin@buy2.com", "Password123!");
@@ -103,7 +110,7 @@ describe("AuthService", () => {
     it("rejects a wrong password", async () => {
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
         ...employee,
-        passwordHash: hashOf("Password123!"),
+        userCredential: { passwordHash: hashOf("Password123!") },
       });
 
       await expect(
@@ -115,7 +122,7 @@ describe("AuthService", () => {
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
         ...employee,
         status: "Suspended",
-        passwordHash: hashOf("Password123!"),
+        userCredential: { passwordHash: hashOf("Password123!") },
       });
 
       await expect(
@@ -124,7 +131,10 @@ describe("AuthService", () => {
     });
 
     it("rejects an employee without a password (pending setup)", async () => {
-      (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
+      (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
+        ...employee,
+        userCredential: { passwordHash: null },
+      });
 
       await expect(
         service.login("admin@buy2.com", "Whatever123!"),
@@ -135,17 +145,17 @@ describe("AuthService", () => {
   describe("otpSend", () => {
     it("generates and persists an OTP with a hashed code", async () => {
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
-      (prisma.otp.findFirst as jest.Mock).mockResolvedValue(null);
-      (prisma.otp.create as jest.Mock).mockResolvedValue({});
+      (prisma.passwordResetOtp.findFirst as jest.Mock).mockResolvedValue(null);
+      (prisma.passwordResetOtp.create as jest.Mock).mockResolvedValue({});
 
       const result = await service.otpSend("admin@buy2.com");
 
       expect(result.message).toBe("OTP sent successfully.");
-      expect(prisma.otp.create).toHaveBeenCalled();
-      const createCalls = (prisma.otp.create as jest.Mock).mock
-        .calls as unknown as Array<Array<{ data: { codeHash: string } }>>;
-      expect(createCalls[0][0].data.codeHash).toMatch(/^[a-f0-9]{64}$/);
-      expect(createCalls[0][0].data.codeHash).not.toBe(result.devCode);
+      expect(prisma.passwordResetOtp.create).toHaveBeenCalled();
+      const createCalls = (prisma.passwordResetOtp.create as jest.Mock).mock
+        .calls as unknown as Array<Array<{ data: { otpHash: string } }>>;
+      expect(createCalls[0][0].data.otpHash).toMatch(/^[a-f0-9]{64}$/);
+      expect(createCalls[0][0].data.otpHash).not.toBe(result.devCode);
     });
 
     it("does not leak whether the email exists", async () => {
@@ -155,12 +165,12 @@ describe("AuthService", () => {
 
       expect(result.message).toBe("OTP sent successfully.");
       expect(result.devCode).toBeUndefined();
-      expect(prisma.otp.create).not.toHaveBeenCalled();
+      expect(prisma.passwordResetOtp.create).not.toHaveBeenCalled();
     });
 
     it("throws 429 during the resend cooldown", async () => {
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
-      (prisma.otp.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.passwordResetOtp.findFirst as jest.Mock).mockResolvedValue({
         createdAt: new Date(),
       });
 
@@ -173,10 +183,11 @@ describe("AuthService", () => {
   describe("passwordReset", () => {
     it("resets the password with a matching OTP", async () => {
       const code = "123456";
-      (prisma.otp.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
+      (prisma.passwordResetOtp.findFirst as jest.Mock).mockResolvedValue({
         id: "otp_1",
-        codeHash: new OtpService().hashCode(code),
-        attempts: 0,
+        otpHash: new OtpService().hashCode(code),
+        attemptCount: 0,
       });
       (prisma.$transaction as jest.Mock).mockResolvedValue([]);
 
@@ -191,26 +202,28 @@ describe("AuthService", () => {
     });
 
     it("rejects a wrong code and increments attempts", async () => {
-      (prisma.otp.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
+      (prisma.passwordResetOtp.findFirst as jest.Mock).mockResolvedValue({
         id: "otp_1",
-        codeHash: new OtpService().hashCode("111111"),
-        attempts: 0,
+        otpHash: new OtpService().hashCode("111111"),
+        attemptCount: 0,
       });
 
       await expect(
         service.passwordReset("admin@buy2.com", "000000", "NewPass123!"),
       ).rejects.toBeInstanceOf(BadRequestException);
-      expect(prisma.otp.update).toHaveBeenCalledWith({
+      expect(prisma.passwordResetOtp.update).toHaveBeenCalledWith({
         where: { id: "otp_1" },
-        data: { attempts: { increment: 1 } },
+        data: { attemptCount: { increment: 1 } },
       });
     });
 
     it("rejects after max attempts", async () => {
-      (prisma.otp.findFirst as jest.Mock).mockResolvedValue({
+      (prisma.employee.findUnique as jest.Mock).mockResolvedValue(employee);
+      (prisma.passwordResetOtp.findFirst as jest.Mock).mockResolvedValue({
         id: "otp_1",
-        codeHash: new OtpService().hashCode("111111"),
-        attempts: 5,
+        otpHash: new OtpService().hashCode("111111"),
+        attemptCount: 5,
       });
 
       await expect(
@@ -226,8 +239,9 @@ describe("AuthService", () => {
         .mockResolvedValue({ sub: "emp_1", type: "setup" });
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
         ...employee,
-        passwordHash: null,
+        userCredential: { passwordHash: null },
       });
+      (prisma.userCredential.upsert as jest.Mock).mockResolvedValue({});
       (prisma.employee.update as jest.Mock).mockResolvedValue({});
 
       const result = await service.setPassword("setup.token", "NewPass123!");
@@ -265,7 +279,7 @@ describe("AuthService", () => {
         .mockResolvedValue({ sub: "emp_1", type: "setup" });
       (prisma.employee.findUnique as jest.Mock).mockResolvedValue({
         ...employee,
-        passwordHash: hashOf("Existing123!"),
+        userCredential: { passwordHash: hashOf("Existing123!") },
       });
 
       await expect(

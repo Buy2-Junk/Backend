@@ -38,18 +38,25 @@ export class AuthService {
   async login(email: string, password: string): Promise<AuthResult> {
     const employee = await this.prisma.employee.findUnique({
       where: { email },
-      include: { role: true },
+      include: { role: true, userCredential: true },
     });
 
+    const credential = employee?.userCredential;
     const valid =
       employee &&
       employee.status !== "Suspended" &&
-      employee.passwordHash !== null &&
-      (await bcrypt.compare(password, employee.passwordHash));
+      credential &&
+      credential.passwordHash !== null &&
+      (await bcrypt.compare(password, credential.passwordHash));
 
     if (!valid) {
       throw new UnauthorizedException("Invalid credentials.");
     }
+
+    await this.prisma.userCredential.update({
+      where: { employeeId: employee.id },
+      data: { lastLoginAt: new Date() },
+    });
 
     const token = await this.signAccessToken(
       employee.id,
@@ -68,8 +75,8 @@ export class AuthService {
       return { message: "OTP sent successfully." };
     }
 
-    const latest = await this.prisma.otp.findFirst({
-      where: { email },
+    const latest = await this.prisma.passwordResetOtp.findFirst({
+      where: { employeeId: employee.id },
       orderBy: { createdAt: "desc" },
     });
     if (
@@ -83,11 +90,11 @@ export class AuthService {
     }
 
     const code = this.otpService.generateCode();
-    await this.prisma.otp.create({
+    console.log(`[DEV] OTP for ${email}: ${code} (expires in ${this.otpService.expiresAt.toISOString()})`);
+    await this.prisma.passwordResetOtp.create({
       data: {
-        email,
         employeeId: employee.id,
-        codeHash: this.otpService.hashCode(code),
+        otpHash: this.otpService.hashCode(code),
         expiresAt: this.otpService.expiresAt,
       },
     });
@@ -103,19 +110,31 @@ export class AuthService {
     otpCode: string,
     newPassword: string,
   ): Promise<{ message: string }> {
-    const otp = await this.prisma.otp.findFirst({
-      where: { email, usedAt: null, expiresAt: { gt: new Date() } },
-      orderBy: { createdAt: "desc" },
+    const employee = await this.prisma.employee.findUnique({
+      where: { email },
     });
 
-    if (!otp || otp.attempts >= this.otpService.maxAttemptsAllowed) {
+    if (!employee) {
       throw new BadRequestException("Invalid or expired OTP.");
     }
 
-    if (otp.codeHash !== this.otpService.hashCode(otpCode)) {
-      await this.prisma.otp.update({
+    const otp = await this.prisma.passwordResetOtp.findFirst({
+      where: {
+        employeeId: employee.id,
+        usedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (!otp || otp.attemptCount >= this.otpService.maxAttemptsAllowed) {
+      throw new BadRequestException("Invalid or expired OTP.");
+    }
+
+    if (otp.otpHash !== this.otpService.hashCode(otpCode)) {
+      await this.prisma.passwordResetOtp.update({
         where: { id: otp.id },
-        data: { attempts: { increment: 1 } },
+        data: { attemptCount: { increment: 1 } },
       });
       throw new BadRequestException("Invalid or expired OTP.");
     }
@@ -123,11 +142,20 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
 
     await this.prisma.$transaction([
-      this.prisma.employee.update({
-        where: { email },
-        data: { passwordHash, status: "Active" },
+      this.prisma.userCredential.upsert({
+        where: { employeeId: employee.id },
+        update: { passwordHash, lastPasswordChangedAt: new Date() },
+        create: {
+          employeeId: employee.id,
+          passwordHash,
+          lastPasswordChangedAt: new Date(),
+        },
       }),
-      this.prisma.otp.update({
+      this.prisma.employee.update({
+        where: { id: employee.id },
+        data: { status: "Active" },
+      }),
+      this.prisma.passwordResetOtp.update({
         where: { id: otp.id },
         data: { usedAt: new Date() },
       }),
@@ -153,18 +181,28 @@ export class AuthService {
 
     const employee = await this.prisma.employee.findUnique({
       where: { id: payload.sub },
+      include: { userCredential: true },
     });
     if (!employee) {
       throw new BadRequestException("Invalid or expired setup token.");
     }
-    if (employee.passwordHash) {
+    if (employee.userCredential?.passwordHash) {
       throw new ConflictException("Initial password has already been set.");
     }
 
     const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.prisma.userCredential.upsert({
+      where: { employeeId: employee.id },
+      update: { passwordHash, lastPasswordChangedAt: new Date() },
+      create: {
+        employeeId: employee.id,
+        passwordHash,
+        lastPasswordChangedAt: new Date(),
+      },
+    });
     await this.prisma.employee.update({
       where: { id: employee.id },
-      data: { passwordHash, status: "Active" },
+      data: { status: "Active" },
     });
 
     return { message: "Password set successfully." };

@@ -9,6 +9,15 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
+  const company = await prisma.company.upsert({
+    where: { code: 'BUY2' },
+    update: {},
+    create: {
+      name: 'Buy2 Junk',
+      code: 'BUY2',
+    },
+  });
+
   const superAdminRole = await prisma.role.upsert({
     where: { name: 'SuperAdmin' },
     update: {},
@@ -35,16 +44,23 @@ async function main() {
   const existing = await prisma.employee.findUnique({ where: { email } });
   if (!existing) {
     const passwordHash = await bcrypt.hash('Admin123!', 10);
-    await prisma.employee.create({
+    const employee = await prisma.employee.create({
       data: {
         email,
-        passwordHash,
         firstName: 'Buy2',
         lastName: 'Super Admin',
         phoneNumber: '+966500000000',
         gender: 'Male',
         status: 'Active',
         roleId: superAdminRole.id,
+        companyId: company.id,
+      },
+    });
+    await prisma.userCredential.create({
+      data: {
+        employeeId: employee.id,
+        passwordHash,
+        lastPasswordChangedAt: new Date(),
       },
     });
     console.log(`Seeded super admin: ${email} / Admin123!`);
