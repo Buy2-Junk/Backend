@@ -1,0 +1,131 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Gender {
+  Male
+  Female
+}
+
+enum EmployeeStatus {
+  Pending
+  Active
+  Suspended
+}
+
+enum JobType {
+  FullTime
+  PartTime
+  Contract
+}
+
+enum SalaryType {
+  Fixed
+  Hourly
+}
+
+enum PayoutPeriod {
+  Weekly
+  Biweekly
+  Monthly
+}
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  status    String   @default("Active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("companies")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  permissions Json
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employees Employee[]
+
+  @@map("roles")
+}
+
+model Employee {
+  id              String         @id @default(cuid())
+  email           String         @unique
+  firstName       String
+  lastName        String
+  phoneNumber     String
+  gender          Gender
+  status          EmployeeStatus @default(Pending)
+  roleId          String
+  role            Role           @relation(fields: [roleId], references: [id])
+  companyId       String?
+  company         Company?       @relation(fields: [companyId], references: [id])
+
+  jobTitle        String?
+  department      String?
+  seniorityLevel  String?
+  jobType         JobType?
+  directManagerId String?
+  directManager   Employee?      @relation("ManagementChain", fields: [directManagerId], references: [id])
+  reports         Employee[]     @relation("ManagementChain")
+  qualificationIds Json?
+
+  salaryType      SalaryType?
+  payoutPeriod    PayoutPeriod?
+  workWeek        Json?
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  userCredential  UserCredential?
+  passwordResetOtps PasswordResetOtp[]
+
+  @@index([roleId])
+  @@index([companyId])
+  @@map("employees")
+}
+
+model UserCredential {
+  id                    String    @id @default(cuid())
+  employeeId            String    @unique
+  passwordHash          String?
+  lastPasswordChangedAt DateTime?
+  lastLoginAt           DateTime?
+  status                String    @default("Active")
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@map("user_credentials")
+}
+
+model PasswordResetOtp {
+  id           String   @id @default(cuid())
+  employeeId   String
+  otpHash      String
+  expiresAt    DateTime
+  attemptCount Int      @default(0)
+  resendCount  Int      @default(0)
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  employee Employee @relation(fields: [employeeId], references: [id])
+
+  @@index([employeeId])
+  @@map("password_reset_otps")
+}

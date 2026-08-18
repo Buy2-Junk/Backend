@@ -1,26 +1,33 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
-import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module';
+import { Test, TestingModule } from "@nestjs/testing";
+import { INestApplication } from "@nestjs/common";
+import request from "supertest";
+import { App } from "supertest/types";
+import { AppModule } from "./../src/app.module";
+import { PrismaService } from "./../src/prisma/prisma.service";
 
-describe('AppController (e2e)', () => {
+describe("AppController (e2e)", () => {
   let app: INestApplication<App>;
 
   beforeEach(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      // PrismaService instantiates a WASM query compiler + opens a DB
+      // connection on module init, which the Jest VM cannot do. This route
+      // test needs no DB, so stub the client.
+      .overrideProvider(PrismaService)
+      .useValue({})
+      .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
   });
 
-  it('/ (GET)', () => {
+  it("/ (GET)", () => {
     return request(app.getHttpServer())
-      .get('/')
+      .get("/")
       .expect(200)
-      .expect('Hello World!');
+      .expect("Hello World!");
   });
 
   afterEach(async () => {
